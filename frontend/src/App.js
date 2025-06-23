@@ -88,46 +88,66 @@ const handleAdd = async () => {
   }
 };
 
-
-  const handleSearch = async () => {
-    console.log("검색어:", form.title);
-
-    try {
-      const res = await axios.get(`http://localhost:8080/books?title=${form.title}`);
-      const book = res.data[0];
-      if (book && book.id) {
-        setForm(book);
-      } else {
-        alert("해당 도서가 없습니다.");
-      }
-    } catch (err) {
-      alert("검색 실패");
+const handleSearch = async () => {
+  const title = form.title.trim();
+  try {
+    const res = await axios.get(`http://localhost:8080/books?title=${encodeURIComponent(title)}`);
+    const book = res.data[0]; 
+    if (book && book.id) {
+      setForm(book); //
+    } else {
+      alert("해당 도서가 없습니다.");
     }
+  } catch (err) {
+    alert("검색 실패");
+    console.error(err);
+  }
+};
+
+
+const handleUpdate = async () => {
+  if (!form.id) return alert("검색 후 수정해주세요.");
+
+  const updatedForm = {
+    id: form.id,
+    title: form.title,
+    author: form.author,
+    publisher: form.publisher,
+    price: form.price && !isNaN(form.price) ? parseFloat(form.price) : 0,
+    genre: form.genre || "",       
+    userId: form.userId || "LeeYunseo" 
   };
 
-  const handleUpdate = async () => {
-    
-    if (!form.id) return alert("검색 후 수정해주세요.");
-    
-    try {
-      await axios.put('http://localhost:8080/books', form);
-      fetchBooks();
-      clearForm();
-    } catch (err) {
-      alert("수정 실패");
-    }
-  };
+  console.log("📤 수정 요청:", updatedForm);
 
-  const handleDelete = async () => {
-    if (!form.id) return alert("검색 후 삭제해주세요.");
-    try {
-      await axios.delete('http://localhost:8080/books', { data: form });
-      fetchBooks();
-      clearForm();
-    } catch (err) {
-      alert("삭제 실패");
-    }
-  };
+  try {
+    await axios.put("http://localhost:8080/books", updatedForm);
+    fetchBooks();
+    clearForm();
+  } catch (err) {
+    alert("수정 실패: " + (err.response?.data?.message || err.message));
+    console.error("❌ AxiosError:", err);
+  }
+};
+
+
+const handleDelete = async () => {
+  if (!form.id) return alert("검색 후 삭제해주세요.");
+  console.log("삭제 요청 ID:", form.id);
+
+  try {
+    // ✅ DTO 형태로 삭제 요청
+    await axios.delete("http://localhost:8080/books", {
+      data: { id: form.id }
+    });
+    fetchBooks();
+    clearForm();
+  } catch (err) {
+    alert("삭제 실패");
+    console.error(err);
+  }
+};
+
 
   const handleDeleteEmptyTitle = async () => {
     const emptyBooks = books.filter((book) => !book.title || book.title.trim() === "");
@@ -175,6 +195,23 @@ const handleAdd = async () => {
   }
 };
 
+const handleGenreSearch = async () => {
+  const trimmedGenre = form.genre?.trim();
+
+  if (!trimmedGenre) {
+    alert("장르를 입력해주세요.");
+    return;
+  }
+
+  try {
+    const res = await axios.get(`http://localhost:8080/books?genre=${encodeURIComponent(trimmedGenre)}`);
+    setBooks(res.data);
+  } catch (err) {
+    alert("장르 검색 실패");
+    console.error(err);
+  }
+};
+
 
 
   return (
@@ -213,6 +250,7 @@ const handleAdd = async () => {
               <Button variant="contained" onClick={handleUpdate}>도서 수정</Button>
               <Button variant="contained" onClick={handleDelete}>도서 삭제</Button>
               <Button variant="outlined" onClick={handleSearchFromYes24}> Yes24에서 검색</Button>
+              <Button variant="outlined" onClick={handleGenreSearch}>장르로 검색</Button>
 
               
               <Button variant="outlined" color="error" onClick={handleDeleteEmptyTitle}>
